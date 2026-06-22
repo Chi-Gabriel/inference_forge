@@ -1,5 +1,6 @@
 export function bindElements() {
   return {
+    sidebarToggle: document.getElementById("sidebarToggle"),
     apiBaseUrl: document.getElementById("apiBaseUrl"),
     apiKey: document.getElementById("apiKey"),
     apiStatus: document.getElementById("apiStatus"),
@@ -35,6 +36,16 @@ export function bindElements() {
 
 export function initializeTabs() {
   document.querySelectorAll(".tab").forEach((tab) => tab.addEventListener("click", switchTab));
+}
+
+export function initializeSidebar(toggle) {
+  const collapsed = localStorage.getItem("inference_forge_sidebar_collapsed") === "true";
+  document.body.classList.toggle("sidebar-collapsed", collapsed);
+  toggle.addEventListener("click", () => {
+    const next = !document.body.classList.contains("sidebar-collapsed");
+    document.body.classList.toggle("sidebar-collapsed", next);
+    localStorage.setItem("inference_forge_sidebar_collapsed", String(next));
+  });
 }
 
 export function escapeHtml(value) {

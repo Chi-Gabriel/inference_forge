@@ -1,0 +1,104 @@
+.shell {
+  min-width: 0;
+  padding: 2rem;
+}
+
+.hero {
+  margin-bottom: 1rem;
+}
+
+.hero h1 {
+  font-size: clamp(2rem, 4vw, 4.4rem);
+  letter-spacing: -0.05em;
+  line-height: 0.95;
+  margin: 0;
+}
+
+.eyebrow {
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  margin: 0 0 0.6rem;
+  text-transform: uppercase;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.panel {
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 1.2rem;
+  box-shadow: 0 22px 80px rgb(0 0 0 / 0.22);
+  padding: 1rem;
+}
+
+.pill {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 0.8rem;
+  font-weight: 800;
+  padding: 0.35rem 0.7rem;
+}
+
+.pill.good {
+  background: rgb(72 213 151 / 0.14);
+  color: var(--good);
+}
+
+.pill.warn {
+  background: rgb(244 201 93 / 0.14);
+  color: var(--warn);
+}
+
+.pill.bad {
+  background: rgb(255 107 107 / 0.14);
+  color: var(--bad);
+}
+
+.pill.neutral {
+  color: var(--muted);
+}
+
+.tabs {
+  display: flex;
+  gap: 0.6rem;
+  margin: 1rem 0;
+}
+
+.tab {
+  background: var(--panel-2);
+  color: var(--muted);
+}
+
+.tab.active {
+  background: var(--accent);
+  color: #04101c;
+}
+
+.tab-panel,
+.workspace {
+  display: none;
+}
+
+.tab-panel.active,
+.workspace.active {
+  display: grid;
+}
+
+.help-dot {
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--accent);
+  cursor: help;
+  display: inline-grid;
+  flex: 0 0 1.15rem;
+  font-size: 0.72rem;
+  font-weight: 900;
+  height: 1.15rem;
+  place-items: center;
+}

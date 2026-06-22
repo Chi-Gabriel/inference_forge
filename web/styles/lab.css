@@ -1,0 +1,121 @@
+.controls {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.grid.two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.grid.six {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.check {
+  align-items: center;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.check input {
+  width: auto;
+}
+
+.video-layout {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1.35fr) minmax(360px, 0.65fr);
+}
+
+video {
+  aspect-ratio: 16 / 9;
+  background: #050812;
+  border-radius: 1rem;
+  display: block;
+  width: 100%;
+}
+
+.timeline {
+  background: #060b16;
+  border: 1px solid var(--line);
+  border-radius: 0.8rem;
+  height: 4rem;
+  margin-top: 0.75rem;
+  overflow: hidden;
+  position: relative;
+}
+
+.segment {
+  bottom: 0;
+  cursor: pointer;
+  position: absolute;
+  top: 0;
+}
+
+.segment:hover {
+  filter: brightness(1.25);
+}
+
+.playhead {
+  background: #ffffff;
+  bottom: 0;
+  box-shadow: 0 0 14px rgb(255 255 255 / 0.75);
+  position: absolute;
+  top: 0;
+  width: 2px;
+  z-index: 3;
+}
+
+.progress-box {
+  margin-bottom: 1rem;
+}
+
+.progress-track {
+  background: #060b16;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  height: 0.7rem;
+  overflow: hidden;
+}
+
+#progressBar {
+  background: linear-gradient(90deg, var(--accent), var(--good));
+  height: 100%;
+  transition: width 160ms ease;
+  width: 0%;
+}
+
+.result-list,
+.history {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.result-item {
+  background: #0c1324;
+  border: 1px solid var(--line);
+  border-radius: 0.9rem;
+  padding: 0.85rem;
+}
+
+.score {
+  color: var(--good);
+  font-weight: 800;
+}
+
+.image-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+}
+
+.image-grid img {
+  border-radius: 0.8rem;
+  width: 100%;
+}

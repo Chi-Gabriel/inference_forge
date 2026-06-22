@@ -1,0 +1,36 @@
+@media (max-width: 980px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    height: auto;
+    position: relative;
+  }
+
+  body.sidebar-collapsed .app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  body.sidebar-collapsed .sidebar {
+    align-items: stretch;
+  }
+
+  body.sidebar-collapsed .brand-copy,
+  body.sidebar-collapsed .feature-label,
+  body.sidebar-collapsed .sidebar-footer label,
+  body.sidebar-collapsed .status-card {
+    display: initial;
+  }
+
+  .grid.two,
+  .grid.six,
+  .video-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .hero {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

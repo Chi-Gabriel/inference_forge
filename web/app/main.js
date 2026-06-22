@@ -1,5 +1,5 @@
 import { ApiClient } from "./api.js";
-import { bindElements, escapeHtml, initializeTabs, renderHistoryItems } from "./dom.js";
+import { bindElements, escapeHtml, initializeSidebar, initializeTabs, renderHistoryItems } from "./dom.js";
 import { addRun, loadStoredSettings, runHistory, saveApiBaseUrl, saveApiKey } from "./state.js";
 import { formatScore, formatTime, normalizeSegments, renderTimeline } from "./timeline.js";
 
@@ -19,6 +19,7 @@ function initialize() {
   elements.videoForm.addEventListener("submit", submitVideo);
   elements.textForm.addEventListener("submit", submitText);
   elements.imageForm.addEventListener("submit", submitImage);
+  initializeSidebar(elements.sidebarToggle);
   initializeTabs();
 }
 

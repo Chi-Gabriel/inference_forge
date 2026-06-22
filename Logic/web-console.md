@@ -55,10 +55,17 @@ Each status update should include an integer progress percentage when known, a h
 
 The console should prioritize one-screen interpretation over raw logs. Video results should use a compact timeline, not a tall vertical list. Configuration, progress, query, and results should remain visible together on desktop layouts. Advanced raw payloads may be collapsible, but the primary view must answer: what was processed, with which parameters, how long it took, and where the query matched.
 
+Feature navigation belongs in a responsive sidebar because the console will host multiple services over time. The sidebar should expose feature-level destinations, not implementation internals. It must support a compact/collapsed mode where icons remain visible and text labels are hidden. Connection controls such as API base URL and API key belong near the bottom of the sidebar so they remain accessible while switching feature screens or lab tabs.
+
+Feature pages may have their own internal tabs, such as video, text, and image inside the multimodal embedding feature. Those tabs should stay in the content area because they are modes of one feature, not separate top-level services.
+
+Non-obvious configuration fields should include short hover help close to the label. Avoid help text for self-explanatory fields such as uploads, URLs, and natural-language queries. Help copy should explain impact and tradeoff, not restate the label.
+
 ## Related files
 
 - `web/index.html` owns the console layout and user-facing controls.
 - `web/app/main.js` owns the embedding-lab workflow and public API calls.
+- `web/app/dom.js` owns tab/sidebar DOM behavior and shared HTML helpers.
 - `web/app/api.js` owns browser-side HTTP behavior and job polling.
 - `web/app/timeline.js` owns the video score timeline and playhead mapping.
 - `web/app/state.js` owns browser-persisted API settings and memory-only run history.
