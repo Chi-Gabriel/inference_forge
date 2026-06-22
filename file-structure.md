@@ -11,8 +11,13 @@ app/
   services/
     embeddings/
     reranking/
+    runtime/
   workers/
   main.py
+web/
+  app/
+  index.html
+  styles.css
 tests/
   codes/
     unit/

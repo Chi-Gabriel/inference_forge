@@ -10,3 +10,4 @@ Model switching occurs only between batches. Minimum residency and switch cooldo
 
 Co-residency is allowed only when profiled model peaks plus activation reserve and fragmentation margin fit below the configured VRAM cap.
 
+The first public implementation uses the same job contract with an in-process queue and worker. This is a development bridge, not the final distributed worker topology. Public clients already create jobs and poll structured status; the backing store can move to Redis without changing those routes.

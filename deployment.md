@@ -12,3 +12,12 @@
 - Both 8B models can remain in system RAM on the current host, but not in 24 GiB VRAM. The measured embedding-to-reranking transition is about 17 seconds; use the longer default residency epoch values unless latency requirements justify another deployment topology.
 - The initial single-GPU profile now uses Qwen3-VL-Reranker-2B revision `4bd860ac4f15ad1897a214615cccc700f8f71818` beside the 8B embedder. With a 23 GiB cap, 2.5 GiB activation reserve, and 1 GiB margin, automatic residency selects co-resident mode.
 - Keep GPU execution serialized. Initial video admission is 1 FPS, at most 16 frames, and at most four video items or pairs per batch. See `gpu-benchmarks.md` before changing these limits.
+
+## 2026-06-22
+
+- The development web console can be served with `python -m http.server 8080 -d web`.
+- Browser access requires the API host to allow the console origin through `CORS_ALLOWED_ORIGINS`. The default development origins are localhost and 127.0.0.1 on ports 5173 and 8080.
+- TikTok, Facebook, YouTube, or other extractor-backed URL ingestion still needs a dedicated media-download feature document and server-side `yt-dlp` provisioning before it is enabled.
+- Install the updated runtime dependencies after pulling this change: `pip install -e '.[dev]'` for API development or the equivalent image rebuild. `python-multipart` is required for media uploads.
+- Configure `MEDIA_ROOT`, media byte limits, direct-download timeout/redirect limits, and `MEDIA_ALLOWED_CONTENT_TYPES` for the deployment host.
+- `API_KEY` is optional. If set, public `/v1` work routes require `Authorization: Bearer <API_KEY>`.

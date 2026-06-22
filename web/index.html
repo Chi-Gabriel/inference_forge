@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Inference Forge Console</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <div>
+          <p class="eyebrow">Inference Forge</p>
+          <h1>Multimodal embedding lab</h1>
+          <p class="muted">
+            Test video, image, and text embeddings through the same public API that external clients use.
+          </p>
+        </div>
+        <div class="status-card">
+          <span id="apiStatus" class="pill neutral">Not checked</span>
+          <button id="checkApi" type="button">Check API</button>
+        </div>
+      </section>
+
+      <section class="panel credentials">
+        <label>
+          API base URL
+          <input id="apiBaseUrl" type="url" placeholder="http://localhost:8000" />
+        </label>
+        <label>
+          API key
+          <input id="apiKey" type="password" placeholder="Bearer token" autocomplete="off" />
+        </label>
+      </section>
+
+      <section class="tabs" role="tablist" aria-label="Embedding labs">
+        <button class="tab active" data-tab="video" type="button">Video</button>
+        <button class="tab" data-tab="text" type="button">Text</button>
+        <button class="tab" data-tab="image" type="button">Image</button>
+      </section>
+
+      <section id="videoTab" class="workspace tab-panel active">
+        <form id="videoForm" class="panel controls">
+          <div class="grid two">
+            <label>
+              Video upload
+              <input id="videoFile" type="file" accept="video/*" />
+            </label>
+            <label>
+              Video URL
+              <input id="videoUrl" type="url" placeholder="https://example.com/video.mp4" />
+            </label>
+          </div>
+
+          <div class="grid six">
+            <label>
+              Chunk seconds
+              <input id="chunkSeconds" type="number" min="1" step="1" value="10" />
+            </label>
+            <label>
+              Overlap
+              <input id="overlapSeconds" type="number" min="0" step="1" value="0" />
+            </label>
+            <label>
+              FPS
+              <input id="videoFps" type="number" min="0.1" step="0.1" value="1" />
+            </label>
+            <label>
+              Max frames
+              <input id="maxFrames" type="number" min="1" step="1" value="16" />
+            </label>
+            <label>
+              Dimensions
+              <input id="dimensions" type="number" min="64" max="4096" step="64" value="4096" />
+            </label>
+            <label>
+              Top K
+              <input id="topK" type="number" min="1" step="1" value="8" />
+            </label>
+          </div>
+
+          <label>
+            Search query
+            <input id="videoQuery" type="text" placeholder="person holding a product near a window" />
+          </label>
+
+          <div class="row">
+            <label class="check">
+              <input id="enableRerank" type="checkbox" />
+              Enable reranker second pass
+            </label>
+            <button type="submit">Embed and search</button>
+          </div>
+        </form>
+
+        <section class="panel results">
+          <div class="video-layout">
+            <div>
+              <video id="videoPreview" controls></video>
+              <div id="timeline" class="timeline" aria-label="Video score timeline"></div>
+            </div>
+            <div>
+              <div class="result-head">
+                <h2>Results</h2>
+                <span id="latencyBadge" class="pill neutral">No run</span>
+              </div>
+              <div id="progressBox" class="progress-box">
+                <div class="progress-track"><div id="progressBar"></div></div>
+                <p id="progressLabel" class="muted">Waiting for input.</p>
+              </div>
+              <div id="resultList" class="result-list"></div>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <section id="textTab" class="workspace tab-panel">
+        <form id="textForm" class="panel controls">
+          <label>
+            Text corpus
+            <textarea id="textCorpus" rows="8" placeholder="One item per line"></textarea>
+          </label>
+          <label>
+            Query
+            <input id="textQuery" type="text" placeholder="What should match?" />
+          </label>
+          <button type="submit">Embed text</button>
+        </form>
+        <section id="textResults" class="panel result-list"></section>
+      </section>
+
+      <section id="imageTab" class="workspace tab-panel">
+        <form id="imageForm" class="panel controls">
+          <label>
+            Images
+            <input id="imageFiles" type="file" accept="image/*" multiple />
+          </label>
+          <label>
+            Query
+            <input id="imageQuery" type="text" placeholder="Find images containing..." />
+          </label>
+          <button type="submit">Embed images</button>
+        </form>
+        <section id="imageResults" class="panel image-grid"></section>
+      </section>
+
+      <section class="panel">
+        <div class="result-head">
+          <h2>Run history</h2>
+          <span class="muted">Memory-only for this page session</span>
+        </div>
+        <div id="historyList" class="history"></div>
+      </section>
+    </main>
+
+    <script type="module" src="./app/main.js"></script>
+  </body>
+</html>

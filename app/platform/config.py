@@ -1,8 +1,16 @@
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+DEFAULT_CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://localhost:8080",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:8080",
+]
 
 
 class Settings(BaseSettings):
@@ -15,7 +23,24 @@ class Settings(BaseSettings):
     app_debug: bool = False
     app_host: str = "0.0.0.0"
     app_port: int = Field(default=8000, ge=1, le=65535)
+    cors_allowed_origins: list[str] = Field(default=DEFAULT_CORS_ALLOWED_ORIGINS)
+    api_key: str | None = None
     redis_url: str = "redis://redis:6379/0"
+    media_root: Path = Path("var/media")
+    media_upload_max_bytes: int = Field(default=1_073_741_824, gt=0)
+    media_download_max_bytes: int = Field(default=1_073_741_824, gt=0)
+    media_download_timeout_seconds: float = Field(default=30, gt=0)
+    media_download_redirect_limit: int = Field(default=3, ge=0, le=10)
+    media_allowed_content_types: list[str] = Field(
+        default=[
+            "video/mp4",
+            "video/quicktime",
+            "video/webm",
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+        ]
+    )
 
     embedding_enabled: bool = True
     reranking_enabled: bool = True

@@ -23,3 +23,26 @@ pip install -e '.[dev,gpu]'
 See `Logic/` for behavior and invariants. Deployment-sensitive changes are recorded in `deployment.md`.
 
 Measured RTX 3090 limits and stress results are recorded in `gpu-benchmarks.md`.
+
+## Web console
+
+The development web console lives in `web/` and talks to the public HTTP API only.
+
+```bash
+python -m http.server 8080 -d web
+```
+
+Open `http://localhost:8080`, set the API base URL, and enter an API key if the deployment requires one. The first console workflow targets video/text/image embedding parameter tests and is documented in `Logic/web-console.md`.
+
+## Initial public API
+
+- `GET /v1/models`
+- `POST /v1/media/uploads`
+- `POST /v1/media/downloads`
+- `GET /v1/media/{media_id}`
+- `POST /v1/embeddings/jobs`
+- `POST /v1/embeddings`
+- `POST /v1/rerank/jobs`
+- `GET /v1/jobs/{job_id}`
+
+The current job store is in-process for development. It preserves the external job contract, but it is not the final Redis-backed distributed queue.
