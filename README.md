@@ -26,10 +26,23 @@ Measured RTX 3090 limits and stress results are recorded in `gpu-benchmarks.md`.
 
 ## Local runtime without Docker
 
-For rented GPU hosts where Docker is unavailable, use the root scripts:
+For rented GPU hosts where Docker is unavailable, run setup from the project root:
 
 ```bash
-cp .env.example .env
+./setup.sh
+```
+
+That installs available host packages when the process has permission, syncs `.venv`, writes local `.env` defaults, verifies CUDA visibility, and starts Redis, API, and web.
+
+If you only want setup without starting services:
+
+```bash
+./setup.sh --no-start
+```
+
+Manual start after setup:
+
+```bash
 ./scripts/start.sh
 ```
 
@@ -43,15 +56,34 @@ Or run the processes separately:
 Services:
 
 - API: `http://localhost:8000`
-- Web console: `http://localhost:8080`
+- Web console: `http://localhost:3000`
 
-If port `8080` is already used, override it:
+If port `3000` is already used, override it:
 
 ```bash
 WEB_PORT=18080 ./scripts/start-web.sh
 ```
 
-The current development job store is in-process, so Redis is not required for this local path yet. Keep `REDIS_URL` configured for the later Redis-backed worker.
+`./scripts/start.sh` starts Redis too when `redis-server` is installed. If Redis is reachable, jobs and progress are Redis-backed. If Redis is unavailable with `JOB_STORE_BACKEND=auto`, the API falls back to in-process jobs.
+
+To force Redis and fail fast if it is unavailable:
+
+```env
+JOB_STORE_BACKEND=redis
+```
+
+If you want to start Redis manually:
+
+```bash
+./scripts/start-redis.sh
+```
+
+If `redis-server` is not installed and sudo is available:
+
+```bash
+sudo apt update
+sudo apt install -y redis-server
+```
 
 ## Docker runtime
 
@@ -75,10 +107,10 @@ The API container requests GPU access. The host must have NVIDIA drivers, Docker
 The development web console lives in `web/` and talks to the public HTTP API only.
 
 ```bash
-python -m http.server 8080 -d web
+python -m http.server 3000 -d web
 ```
 
-Open `http://localhost:8080`, set the API base URL, and enter an API key if the deployment requires one. The first console workflow targets video/text/image embedding parameter tests and is documented in `Logic/web-console.md`.
+Open `http://localhost:3000`, set the API base URL, and enter an API key if the deployment requires one. The first console workflow targets video/text/image embedding parameter tests and is documented in `Logic/web-console.md`.
 
 ## Initial public API
 

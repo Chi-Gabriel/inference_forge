@@ -4,7 +4,7 @@ import time
 from app.platform.config import Settings
 from app.platform.gpu.residency import ResidencyCoordinator
 from app.platform.gpu.types import ModelKind, ResidencyMode
-from app.platform.jobs.store import InMemoryJobStore
+from app.platform.jobs.store import JobStore
 from app.platform.jobs.types import JobKind, JobRecord, JobStatus
 from app.platform.media.store import MediaStore
 from app.services.embeddings.qwen import QwenEmbeddingEngine
@@ -19,7 +19,7 @@ class JobExecutor:
         self,
         settings: Settings,
         media_store: MediaStore,
-        job_store: InMemoryJobStore,
+        job_store: JobStore,
         debug: bool = False,
     ) -> None:
         self.settings = settings
@@ -67,7 +67,7 @@ class JobExecutor:
 
     async def _embedding_job(self, record: JobRecord) -> dict:
         payload = EmbeddingJobPayload.model_validate(record.payload)
-        self.job_store.update(
+        await self.job_store.update(
             record.id, JobStatus.RESOLVING_MEDIA, 12, "Resolving media"
         )
         started = time.perf_counter()
@@ -75,7 +75,7 @@ class JobExecutor:
         query_input = (
             self.resolver.resolve_for_qwen(payload.query) if payload.query else None
         )
-        self.job_store.update(record.id, JobStatus.EMBEDDING, 45, "Embedding")
+        await self.job_store.update(record.id, JobStatus.EMBEDDING, 45, "Embedding")
         async with self._gpu_lock:
             await self._residency.ensure_gpu(ModelKind.EMBEDDING)
             vectors = await self._embedding.embed(qwen_inputs, payload.dimensions)
@@ -98,13 +98,13 @@ class JobExecutor:
 
     async def _rerank_job(self, record: JobRecord) -> dict:
         payload = RerankJobPayload.model_validate(record.payload)
-        self.job_store.update(
+        await self.job_store.update(
             record.id, JobStatus.RESOLVING_MEDIA, 20, "Resolving media"
         )
         started = time.perf_counter()
         query = self.resolver.resolve_for_qwen(payload.query)
         documents = [self.resolver.resolve_for_qwen(item) for item in payload.documents]
-        self.job_store.update(record.id, JobStatus.RERANKING, 55, "Reranking")
+        await self.job_store.update(record.id, JobStatus.RERANKING, 55, "Reranking")
         async with self._gpu_lock:
             await self._residency.ensure_gpu(ModelKind.RERANKING)
             scores = await self._reranker.rerank(

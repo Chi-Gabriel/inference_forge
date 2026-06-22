@@ -26,6 +26,10 @@
 - Docker volumes are used for Redis data, media bytes, and Hugging Face model cache. Remove them only when intentionally clearing state: `docker compose down -v`.
 - The API image installs the `gpu` optional dependency group and FFmpeg. Rebuild the image after dependency or CUDA-runtime changes.
 - Non-Docker hosts can use `./scripts/start.sh` after `cp .env.example .env`. This starts the API and web console from the repository `.venv`.
+- Fresh non-Docker hosts can use `./setup.sh`. It performs host package installation when possible, syncs `.venv`, writes local `.env` defaults, verifies CUDA, and starts the stack. Use `./setup.sh --no-start` for provisioning only.
 - For non-Docker GPU hosts, validate `nvidia-smi`, `ffmpeg`, and `.venv/bin/python -c "import torch; print(torch.cuda.is_available())"` before debugging model execution.
 - Keep `HF_HOME=hf_cache` or another persistent host path in `.env` so Hugging Face checkpoints survive restarts on rented machines.
-- If port `8080` is occupied on a rented host, start the web console with `WEB_PORT=<port> ./scripts/start-web.sh`.
+- If port `3000` is occupied on a rented host, start the web console with `WEB_PORT=<port> ./scripts/start-web.sh`.
+- Non-Docker Redis can be started with `./scripts/start-redis.sh` when `redis-server` is installed. It stores append-only Redis data under `var/redis` by default.
+- `JOB_STORE_BACKEND=auto` uses Redis when reachable and falls back to memory. Use `JOB_STORE_BACKEND=redis` for production-like runs where job durability must not silently downgrade.
+- If Redis is missing on a non-Docker host, install it with the host package manager when allowed, for example `sudo apt install -y redis-server`.

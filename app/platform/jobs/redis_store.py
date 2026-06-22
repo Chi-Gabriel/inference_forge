@@ -1,47 +1,41 @@
 import asyncio
 import time
-from collections import deque
 from collections.abc import Awaitable, Callable
-from typing import Protocol
 
+import redis
+
+from app.platform.jobs.store import safe_error
 from app.platform.jobs.types import JobKind, JobRecord, JobStatus
 
 JobHandler = Callable[[JobRecord], Awaitable[dict]]
+TERMINAL_STATUSES = {JobStatus.COMPLETE, JobStatus.FAILED}
 
 
-class JobStore(Protocol):
-    def configure(self, handler: JobHandler) -> None: ...
-
-    def start(self) -> None: ...
-
-    async def stop(self) -> None: ...
-
-    async def create(self, kind: JobKind, payload: dict) -> JobRecord: ...
-
-    async def get(self, job_id: str) -> JobRecord: ...
-
-    async def update(
+class RedisJobStore:
+    def __init__(
         self,
-        job_id: str,
-        status: JobStatus,
-        progress: int,
-        stage_label: str,
-    ) -> None: ...
-
-
-class InMemoryJobStore:
-    def __init__(self, debug: bool = False) -> None:
+        redis_url: str,
+        prefix: str,
+        block_seconds: int,
+        debug: bool = False,
+    ) -> None:
         self.debug = debug
-        self._jobs: dict[str, JobRecord] = {}
-        self._queue: asyncio.Queue[str] = asyncio.Queue()
-        self._recent: deque[str] = deque(maxlen=1000)
-        self._worker: asyncio.Task | None = None
+        self._redis = redis.Redis.from_url(
+            redis_url,
+            decode_responses=True,
+            socket_connect_timeout=0.5,
+            socket_timeout=0.5,
+        )
+        self._prefix = prefix.rstrip(":")
+        self._block_seconds = block_seconds
         self._handler: JobHandler | None = None
+        self._worker: asyncio.Task | None = None
 
     def configure(self, handler: JobHandler) -> None:
         self._handler = handler
 
     def start(self) -> None:
+        self._recover_unfinished_jobs()
         if self._worker is None or self._worker.done():
             self._worker = asyncio.create_task(self._run())
 
@@ -53,19 +47,19 @@ class InMemoryJobStore:
             await self._worker
         except asyncio.CancelledError:
             pass
+        await asyncio.to_thread(self._redis.close)
 
     async def create(self, kind: JobKind, payload: dict) -> JobRecord:
         record = JobRecord(kind=kind, payload=payload)
-        self._jobs[record.id] = record
-        self._recent.appendleft(record.id)
-        await self._queue.put(record.id)
+        await asyncio.to_thread(self._save, record)
+        await asyncio.to_thread(self._redis.rpush, self._queue_key, record.id)
         return record
 
     async def get(self, job_id: str) -> JobRecord:
-        record = self._jobs.get(job_id)
-        if record is None:
+        data = await asyncio.to_thread(self._redis.get, self._job_key(job_id))
+        if data is None:
             raise KeyError(job_id)
-        return record
+        return JobRecord.model_validate_json(data)
 
     async def update(
         self,
@@ -79,12 +73,26 @@ class InMemoryJobStore:
         record.progress = max(0, min(100, progress))
         record.stage_label = stage_label
         record.updated_at = time.time()
+        await asyncio.to_thread(self._save, record)
+
+    def ping(self) -> None:
+        self._redis.ping()
 
     async def _run(self) -> None:
         while True:
-            job_id = await self._queue.get()
+            item = await asyncio.to_thread(
+                self._redis.blpop,
+                self._queue_key,
+                self._block_seconds,
+            )
+            if item is None:
+                continue
+            job_id = item[1]
             record = await self.get(job_id)
+            if record.status in TERMINAL_STATUSES:
+                continue
             record.started_at = time.time()
+            await asyncio.to_thread(self._save, record)
             try:
                 if self._handler is None:
                     raise RuntimeError("Job handler is not configured")
@@ -107,10 +115,29 @@ class InMemoryJobStore:
                 record.updated_at = now
                 record.elapsed_ms = int((now - (record.started_at or now)) * 1000)
             finally:
-                self._queue.task_done()
+                await asyncio.to_thread(self._save, record)
 
+    def _recover_unfinished_jobs(self) -> None:
+        for key in self._redis.scan_iter(f"{self._prefix}:job:*"):
+            data = self._redis.get(key)
+            if data is None:
+                continue
+            record = JobRecord.model_validate_json(data)
+            if record.status in TERMINAL_STATUSES:
+                continue
+            record.status = JobStatus.QUEUED
+            record.progress = 0
+            record.stage_label = "Queued after restart"
+            record.updated_at = time.time()
+            self._save(record)
+            self._redis.rpush(self._queue_key, record.id)
 
-def safe_error(exc: Exception) -> str:
-    if isinstance(exc, (ValueError, KeyError, RuntimeError)):
-        return str(exc).strip("'") or "Request failed"
-    return "Internal job execution failed"
+    def _save(self, record: JobRecord) -> None:
+        self._redis.set(self._job_key(record.id), record.model_dump_json())
+
+    @property
+    def _queue_key(self) -> str:
+        return f"{self._prefix}:jobs:queue"
+
+    def _job_key(self, job_id: str) -> str:
+        return f"{self._prefix}:job:{job_id}"

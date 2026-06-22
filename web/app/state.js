@@ -5,7 +5,7 @@ export const runHistory = [];
 
 export function loadStoredSettings() {
   return {
-    apiBaseUrl: localStorage.getItem(API_BASE_URL_KEY) || "http://localhost:8000",
+    apiBaseUrl: localStorage.getItem(API_BASE_URL_KEY) || defaultApiBaseUrl(),
     apiKey: localStorage.getItem(API_KEY_KEY) || "",
   };
 }
@@ -23,4 +23,11 @@ export function addRun(run) {
     ...run,
     createdAt: new Date().toISOString(),
   });
+}
+
+function defaultApiBaseUrl() {
+  if (location.hostname && location.hostname !== "localhost") {
+    return `${location.protocol}//${location.hostname}:8000`;
+  }
+  return "http://localhost:8000";
 }

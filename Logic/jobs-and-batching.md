@@ -10,13 +10,17 @@ Model switching occurs only between batches. Minimum residency and switch cooldo
 
 Co-residency is allowed only when profiled model peaks plus activation reserve and fragmentation margin fit below the configured VRAM cap.
 
-The first public implementation uses the same job contract with an in-process queue and worker. This is a development bridge, not the final distributed worker topology. Public clients already create jobs and poll structured status; the backing store can move to Redis without changing those routes.
+The public implementation uses the same job contract for Redis and memory stores. When Redis is reachable, jobs and progress are stored under the configured Redis prefix and queued through a Redis list. If Redis is unavailable and the backend is `auto`, the app falls back to an in-process store for development continuity. For production-like runs, force `JOB_STORE_BACKEND=redis` so startup fails instead of silently losing durability.
+
+Redis-backed jobs survive API restarts. Unfinished non-terminal jobs are requeued on startup. Completed and failed jobs remain readable until Redis state is intentionally cleared.
 
 ## Related files
 
 - `app/api/routes/jobs.py` owns public job lookup.
 - `app/platform/jobs/types.py` owns job status, kind, internal record, and public response contracts.
-- `app/platform/jobs/store.py` owns the current in-process queue, worker loop, progress updates, and safe error shaping.
+- `app/platform/jobs/store.py` owns the job-store interface, in-process fallback queue, worker loop, progress updates, and safe error shaping.
+- `app/platform/jobs/redis_store.py` owns Redis job records, Redis queue claiming, restart recovery, and Redis-backed worker execution.
+- `app/platform/jobs/factory.py` owns memory/Redis backend selection.
 - `app/services/runtime/executor.py` owns dispatch from job kind to embedding or reranking execution.
 - `app/workers/scheduler.py` owns the reusable scheduler shape for the later Redis-backed batching worker.
 - `app/platform/gpu/policy.py` owns queue starvation, residency epoch, and switch decision policy.

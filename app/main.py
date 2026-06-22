@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.router import api_router
 from app.platform.config import get_settings
-from app.platform.jobs.store import InMemoryJobStore
+from app.platform.jobs.factory import create_job_store
 from app.platform.media.store import MediaStore
 from app.services.runtime import JobExecutor
 
@@ -15,7 +15,7 @@ from app.services.runtime import JobExecutor
 async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
     media_store = MediaStore(settings, settings.app_debug)
-    job_store = InMemoryJobStore(settings.app_debug)
+    job_store = create_job_store(settings)
     executor = JobExecutor(settings, media_store, job_store, settings.app_debug)
     job_store.configure(executor.execute)
     job_store.start()

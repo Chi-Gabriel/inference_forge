@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     cors_allowed_origins: list[str] = Field(default=DEFAULT_CORS_ALLOWED_ORIGINS)
     api_key: str | None = None
     redis_url: str = "redis://redis:6379/0"
+    job_store_backend: Literal["auto", "memory", "redis"] = "auto"
+    job_store_redis_prefix: str = "inference_forge"
+    job_store_redis_block_seconds: int = Field(default=2, ge=1, le=30)
     media_root: Path = Path("var/media")
     media_upload_max_bytes: int = Field(default=1_073_741_824, gt=0)
     media_download_max_bytes: int = Field(default=1_073_741_824, gt=0)

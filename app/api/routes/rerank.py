@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Request
 
 from app.api.dependencies import require_api_key
-from app.platform.jobs.store import InMemoryJobStore
+from app.platform.jobs.store import JobStore
 from app.platform.jobs.types import JobKind, JobPublic, public_job
 from app.services.runtime.types import RerankJobPayload
 
@@ -21,5 +21,5 @@ async def create_rerank_job(
     return public_job(record)
 
 
-def job_store(request: Request) -> InMemoryJobStore:
+def job_store(request: Request) -> JobStore:
     return request.app.state.job_store

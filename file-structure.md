@@ -21,6 +21,7 @@ web/
 scripts/
   start.sh
   start-api.sh
+  start-redis.sh
   start-web.sh
 tests/
   codes/
@@ -30,6 +31,7 @@ tests/
     api/
 Dockerfile
 compose.yaml
+setup.sh
 code-rules.md
 code-vibe.md
 knowledge.md
