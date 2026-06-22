@@ -1,0 +1,45 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "inference-forge"
+version = "0.1.0"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+  "fastapi>=0.115,<1",
+  "pydantic-settings>=2.7,<3",
+  "redis>=5.2,<6",
+  "uvicorn[standard]>=0.34,<1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "httpx>=0.28,<1",
+  "pytest>=8.3,<9",
+  "pytest-asyncio>=0.25,<1",
+  "ruff>=0.11,<1",
+]
+gpu = [
+  "accelerate>=1.12,<2",
+  "decord>=0.6,<1",
+  "qwen-vl-utils>=0.0.14",
+  "torch>=2.8,<2.9",
+  "torchvision>=0.23,<0.24",
+  "transformers>=4.57.3,<5",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests/codes"]
+asyncio_mode = "auto"
+pythonpath = ["."]
