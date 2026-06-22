@@ -1,0 +1,81 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      APP_DEBUG: ${APP_DEBUG:-false}
+      APP_HOST: 0.0.0.0
+      APP_PORT: 8000
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-["http://localhost:5173","http://localhost:8080","http://127.0.0.1:5173","http://127.0.0.1:8080"]}
+      API_KEY: ${API_KEY:-}
+      REDIS_URL: redis://redis:6379/0
+      MEDIA_ROOT: /data/media
+      MEDIA_UPLOAD_MAX_BYTES: ${MEDIA_UPLOAD_MAX_BYTES:-1073741824}
+      MEDIA_DOWNLOAD_MAX_BYTES: ${MEDIA_DOWNLOAD_MAX_BYTES:-1073741824}
+      MEDIA_DOWNLOAD_TIMEOUT_SECONDS: ${MEDIA_DOWNLOAD_TIMEOUT_SECONDS:-30}
+      MEDIA_DOWNLOAD_REDIRECT_LIMIT: ${MEDIA_DOWNLOAD_REDIRECT_LIMIT:-3}
+      MEDIA_ALLOWED_CONTENT_TYPES: ${MEDIA_ALLOWED_CONTENT_TYPES:-["video/mp4","video/quicktime","video/webm","image/jpeg","image/png","image/webp"]}
+      EMBEDDING_ENABLED: ${EMBEDDING_ENABLED:-true}
+      RERANKING_ENABLED: ${RERANKING_ENABLED:-true}
+      EMBEDDING_MODEL_ID: ${EMBEDDING_MODEL_ID:-Qwen/Qwen3-VL-Embedding-8B}
+      EMBEDDING_MODEL_REVISION: ${EMBEDDING_MODEL_REVISION:-2c4565515e0f265c6511776e7193b22c0968ddc7}
+      EMBEDDING_MODEL_VRAM_GIB: ${EMBEDDING_MODEL_VRAM_GIB:-15.2}
+      EMBEDDING_MAX_LENGTH: ${EMBEDDING_MAX_LENGTH:-8192}
+      EMBEDDING_MAX_FRAMES: ${EMBEDDING_MAX_FRAMES:-16}
+      EMBEDDING_VIDEO_FPS: ${EMBEDDING_VIDEO_FPS:-1}
+      RERANKING_MODEL_ID: ${RERANKING_MODEL_ID:-Qwen/Qwen3-VL-Reranker-2B}
+      RERANKING_MODEL_REVISION: ${RERANKING_MODEL_REVISION:-4bd860ac4f15ad1897a214615cccc700f8f71818}
+      RERANKING_MODEL_VRAM_GIB: ${RERANKING_MODEL_VRAM_GIB:-4}
+      RERANKING_MAX_LENGTH: ${RERANKING_MAX_LENGTH:-8192}
+      RERANKING_MAX_FRAMES: ${RERANKING_MAX_FRAMES:-16}
+      RERANKING_VIDEO_FPS: ${RERANKING_VIDEO_FPS:-1}
+      GPU_RESIDENCY_MODE: ${GPU_RESIDENCY_MODE:-auto}
+      GPU_VRAM_CAP_GIB: ${GPU_VRAM_CAP_GIB:-23}
+      GPU_ACTIVATION_RESERVE_GIB: ${GPU_ACTIVATION_RESERVE_GIB:-2.5}
+      GPU_FRAGMENTATION_MARGIN_GIB: ${GPU_FRAGMENTATION_MARGIN_GIB:-1}
+      HF_HOME: /models/huggingface
+      HF_HUB_DISABLE_XET: ${HF_HUB_DISABLE_XET:-1}
+    ports:
+      - "8000:8000"
+    volumes:
+      - media_data:/data/media
+      - hf_cache:/models/huggingface
+    depends_on:
+      redis:
+        condition: service_healthy
+    gpus: all
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health/live"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  web:
+    image: nginx:1.27-alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./web:/usr/share/nginx/html:ro
+    depends_on:
+      api:
+        condition: service_started
+
+volumes:
+  hf_cache:
+  media_data:
+  redis_data:

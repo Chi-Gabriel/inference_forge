@@ -21,3 +21,11 @@
 - Install the updated runtime dependencies after pulling this change: `pip install -e '.[dev]'` for API development or the equivalent image rebuild. `python-multipart` is required for media uploads.
 - Configure `MEDIA_ROOT`, media byte limits, direct-download timeout/redirect limits, and `MEDIA_ALLOWED_CONTENT_TYPES` for the deployment host.
 - `API_KEY` is optional. If set, public `/v1` work routes require `Authorization: Bearer <API_KEY>`.
+- Docker runtime is now rooted at `compose.yaml`. Start with `cp .env.example .env` and `docker compose up --build`.
+- GPU Docker runs require NVIDIA Container Toolkit on the host. Validate `docker run --rm --gpus all nvidia/cuda:12.8.1-base-ubuntu22.04 nvidia-smi` before debugging application-level CUDA issues.
+- Docker volumes are used for Redis data, media bytes, and Hugging Face model cache. Remove them only when intentionally clearing state: `docker compose down -v`.
+- The API image installs the `gpu` optional dependency group and FFmpeg. Rebuild the image after dependency or CUDA-runtime changes.
+- Non-Docker hosts can use `./scripts/start.sh` after `cp .env.example .env`. This starts the API and web console from the repository `.venv`.
+- For non-Docker GPU hosts, validate `nvidia-smi`, `ffmpeg`, and `.venv/bin/python -c "import torch; print(torch.cuda.is_available())"` before debugging model execution.
+- Keep `HF_HOME=hf_cache` or another persistent host path in `.env` so Hugging Face checkpoints survive restarts on rented machines.
+- If port `8080` is occupied on a rented host, start the web console with `WEB_PORT=<port> ./scripts/start-web.sh`.

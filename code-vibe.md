@@ -8,4 +8,4 @@
 - Keep media bytes and large vectors outside Redis; Redis coordinates short-lived state.
 - Make failures structured, observable, retry-aware, and safe to expose.
 - Prefer small typed modules and explicit interfaces over framework coupling.
-
+- Keep Docker runtime concerns at the repository boundary; containers should compose public services without creating hidden internal API paths.

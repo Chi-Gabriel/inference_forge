@@ -18,12 +18,18 @@ web/
   app/
   index.html
   styles.css
+scripts/
+  start.sh
+  start-api.sh
+  start-web.sh
 tests/
   codes/
     unit/
     integration/
     gpu/
     api/
+Dockerfile
+compose.yaml
 code-rules.md
 code-vibe.md
 knowledge.md

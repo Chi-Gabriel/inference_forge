@@ -5,3 +5,4 @@
 - Co-residency must be decided from profiled peak memory plus a fragmentation margin, not checkpoint size or momentary free VRAM alone.
 - A high-level model package can appear to run while silently leaving checkpoint weights uninitialized because its base-class key mapping differs from the checkpoint wrapper. Treat any missing/new-weight warning as a failed integration and verify against the publisher's reference class before trusting output or benchmarks.
 - Reference helpers may advertise default prompts at their highest-level method while lower-level formatters still require an explicit value. Adapters that bypass a sequential helper for batching must reproduce its input normalization before calling lower layers.
+- Docker Compose should not require a local secrets file just to render the stack. Use safe defaults in the compose file and let `.env` override them, so a fresh checkout can still build and expose missing configuration through the application.

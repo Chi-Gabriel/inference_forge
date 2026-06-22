@@ -24,6 +24,52 @@ See `Logic/` for behavior and invariants. Deployment-sensitive changes are recor
 
 Measured RTX 3090 limits and stress results are recorded in `gpu-benchmarks.md`.
 
+## Local runtime without Docker
+
+For rented GPU hosts where Docker is unavailable, use the root scripts:
+
+```bash
+cp .env.example .env
+./scripts/start.sh
+```
+
+Or run the processes separately:
+
+```bash
+./scripts/start-api.sh
+./scripts/start-web.sh
+```
+
+Services:
+
+- API: `http://localhost:8000`
+- Web console: `http://localhost:8080`
+
+If port `8080` is already used, override it:
+
+```bash
+WEB_PORT=18080 ./scripts/start-web.sh
+```
+
+The current development job store is in-process, so Redis is not required for this local path yet. Keep `REDIS_URL` configured for the later Redis-backed worker.
+
+## Docker runtime
+
+Copy the example environment and start the stack:
+
+```bash
+cp .env.example .env
+docker compose up --build
+```
+
+Services:
+
+- API: `http://localhost:8000`
+- Web console: `http://localhost:8080`
+- Redis: `localhost:6379`
+
+The API container requests GPU access. The host must have NVIDIA drivers, Docker, Docker Compose, and NVIDIA Container Toolkit installed for GPU inference jobs. The first embedding or reranking job downloads model files into the `hf_cache` Docker volume.
+
 ## Web console
 
 The development web console lives in `web/` and talks to the public HTTP API only.
