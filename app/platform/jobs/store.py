@@ -28,10 +28,16 @@ class JobStore(Protocol):
         stage_label: str,
     ) -> None: ...
 
+    async def cleanup(self, now: float | None = None) -> int: ...
+
+
+TERMINAL_STATUSES = {JobStatus.COMPLETE, JobStatus.FAILED}
+
 
 class InMemoryJobStore:
-    def __init__(self, debug: bool = False) -> None:
+    def __init__(self, debug: bool = False, job_ttl_hours: float = 24) -> None:
         self.debug = debug
+        self._job_ttl_seconds = job_ttl_hours * 3600
         self._jobs: dict[str, JobRecord] = {}
         self._queue: asyncio.Queue[str] = asyncio.Queue()
         self._recent: deque[str] = deque(maxlen=1000)
@@ -79,6 +85,19 @@ class InMemoryJobStore:
         record.progress = max(0, min(100, progress))
         record.stage_label = stage_label
         record.updated_at = time.time()
+
+    async def cleanup(self, now: float | None = None) -> int:
+        current = now or time.time()
+        expired = [
+            job_id
+            for job_id, record in self._jobs.items()
+            if record.status in TERMINAL_STATUSES
+            and record.completed_at is not None
+            and current - record.completed_at > self._job_ttl_seconds
+        ]
+        for job_id in expired:
+            self._jobs.pop(job_id, None)
+        return len(expired)
 
     async def _run(self) -> None:
         while True:

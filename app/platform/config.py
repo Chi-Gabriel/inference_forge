@@ -29,6 +29,14 @@ class Settings(BaseSettings):
     job_store_backend: Literal["auto", "memory", "redis"] = "auto"
     job_store_redis_prefix: str = "inference_forge"
     job_store_redis_block_seconds: int = Field(default=2, ge=1, le=30)
+    job_ttl_hours: float = Field(default=24, gt=0)
+    cleanup_enabled: bool = True
+    cleanup_interval_seconds: int = Field(default=3600, ge=60)
+    media_upload_ttl_hours: float = Field(default=168, gt=0)
+    media_download_ttl_hours: float = Field(default=168, gt=0)
+    media_temp_ttl_hours: float = Field(default=6, gt=0)
+    media_decoded_ttl_hours: float = Field(default=24, gt=0)
+    media_cache_ttl_hours: float = Field(default=168, gt=0)
     media_root: Path = Path("var/media")
     media_upload_max_bytes: int = Field(default=1_073_741_824, gt=0)
     media_download_max_bytes: int = Field(default=1_073_741_824, gt=0)

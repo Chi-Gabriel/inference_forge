@@ -1,6 +1,7 @@
 import hashlib
 import mimetypes
 import shutil
+import time
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -101,7 +102,31 @@ class MediaStore:
         record = self._records.get(media_id)
         if record is None:
             raise KeyError(media_id)
+        record.path.touch(exist_ok=True)
         return record
+
+    def cleanup(self, now: float | None = None) -> dict[str, int]:
+        current = now or time.time()
+        removed = {
+            "uploads": self._cleanup_indexed_dir(
+                self.paths.uploads, self.settings.media_upload_ttl_hours, current
+            ),
+            "downloads": self._cleanup_indexed_dir(
+                self.paths.downloads, self.settings.media_download_ttl_hours, current
+            ),
+            "temp": self._cleanup_dir(
+                self.paths.temp, self.settings.media_temp_ttl_hours, current
+            ),
+            "decoded": self._cleanup_dir(
+                self.paths.decoded, self.settings.media_decoded_ttl_hours, current
+            ),
+            "cache": self._cleanup_dir(
+                self.paths.cache, self.settings.media_cache_ttl_hours, current
+            ),
+        }
+        self._prune_empty_dirs(self.paths.decoded)
+        self._prune_empty_dirs(self.paths.cache)
+        return removed
 
     def _commit(
         self,
@@ -152,6 +177,47 @@ class MediaStore:
             for path in directory.iterdir():
                 if path.is_file():
                     self._index_existing(path)
+
+    def _cleanup_indexed_dir(
+        self, directory: Path, ttl_hours: float, now: float
+    ) -> int:
+        removed = 0
+        for path in directory.iterdir():
+            if not path.is_file() or not self._expired(path, ttl_hours, now):
+                continue
+            record = self._record_for_path(path)
+            path.unlink(missing_ok=True)
+            removed += 1
+            if record is not None:
+                self._records.pop(record.id, None)
+                self._by_hash.pop(record.sha256, None)
+        return removed
+
+    def _cleanup_dir(self, directory: Path, ttl_hours: float, now: float) -> int:
+        removed = 0
+        for path in directory.rglob("*"):
+            if path.is_file() and self._expired(path, ttl_hours, now):
+                path.unlink(missing_ok=True)
+                removed += 1
+        return removed
+
+    def _record_for_path(self, path: Path) -> MediaRecord | None:
+        for record in self._records.values():
+            if record.path == path:
+                return record
+        return None
+
+    @staticmethod
+    def _expired(path: Path, ttl_hours: float, now: float) -> bool:
+        return now - path.stat().st_mtime > ttl_hours * 3600
+
+    def _prune_empty_dirs(self, directory: Path) -> None:
+        for path in sorted(directory.rglob("*"), reverse=True):
+            if path.is_dir():
+                try:
+                    path.rmdir()
+                except OSError:
+                    continue
 
     def _index_existing(self, path: Path) -> None:
         content_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"

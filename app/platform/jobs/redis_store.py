@@ -17,6 +17,7 @@ class RedisJobStore:
         redis_url: str,
         prefix: str,
         block_seconds: int,
+        job_ttl_hours: float,
         debug: bool = False,
     ) -> None:
         self.debug = debug
@@ -28,6 +29,7 @@ class RedisJobStore:
         )
         self._prefix = prefix.rstrip(":")
         self._block_seconds = block_seconds
+        self._job_ttl_seconds = int(job_ttl_hours * 3600)
         self._handler: JobHandler | None = None
         self._worker: asyncio.Task | None = None
 
@@ -74,6 +76,10 @@ class RedisJobStore:
         record.stage_label = stage_label
         record.updated_at = time.time()
         await asyncio.to_thread(self._save, record)
+
+    async def cleanup(self, now: float | None = None) -> int:
+        current = now or time.time()
+        return await asyncio.to_thread(self._cleanup_terminal_jobs, current)
 
     def ping(self) -> None:
         self._redis.ping()
@@ -133,7 +139,24 @@ class RedisJobStore:
             self._redis.rpush(self._queue_key, record.id)
 
     def _save(self, record: JobRecord) -> None:
-        self._redis.set(self._job_key(record.id), record.model_dump_json())
+        key = self._job_key(record.id)
+        if record.status in TERMINAL_STATUSES and record.completed_at is not None:
+            self._redis.setex(key, self._job_ttl_seconds, record.model_dump_json())
+            return
+        self._redis.set(key, record.model_dump_json())
+
+    def _cleanup_terminal_jobs(self, now: float) -> int:
+        removed = 0
+        for key in self._redis.scan_iter(f"{self._prefix}:job:*"):
+            data = self._redis.get(key)
+            if data is None:
+                continue
+            record = JobRecord.model_validate_json(data)
+            if record.status not in TERMINAL_STATUSES or record.completed_at is None:
+                continue
+            if now - record.completed_at > self._job_ttl_seconds:
+                removed += self._redis.delete(key)
+        return removed
 
     @property
     def _queue_key(self) -> str:

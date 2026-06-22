@@ -33,3 +33,4 @@
 - Non-Docker Redis can be started with `./scripts/start-redis.sh` when `redis-server` is installed. It stores append-only Redis data under `var/redis` by default.
 - `JOB_STORE_BACKEND=auto` uses Redis when reachable and falls back to memory. Use `JOB_STORE_BACKEND=redis` for production-like runs where job durability must not silently downgrade.
 - If Redis is missing on a non-Docker host, install it with the host package manager when allowed, for example `sudo apt install -y redis-server`.
+- Automatic cleanup is controlled by `CLEANUP_ENABLED`, `CLEANUP_INTERVAL_SECONDS`, `JOB_TTL_HOURS`, and the `MEDIA_*_TTL_HOURS` settings. Model cache cleanup is intentionally manual.

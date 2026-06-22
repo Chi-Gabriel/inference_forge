@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.router import api_router
+from app.platform.cleanup import CleanupService
 from app.platform.config import get_settings
 from app.platform.jobs.factory import create_job_store
 from app.platform.media.store import MediaStore
@@ -17,13 +18,19 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     media_store = MediaStore(settings, settings.app_debug)
     job_store = create_job_store(settings)
     executor = JobExecutor(settings, media_store, job_store, settings.app_debug)
+    cleanup_service = CleanupService(
+        settings, media_store, job_store, settings.app_debug
+    )
     job_store.configure(executor.execute)
     job_store.start()
+    cleanup_service.start()
     application.state.media_store = media_store
     application.state.job_store = job_store
+    application.state.cleanup_service = cleanup_service
     try:
         yield
     finally:
+        await cleanup_service.stop()
         await job_store.stop()
 
 

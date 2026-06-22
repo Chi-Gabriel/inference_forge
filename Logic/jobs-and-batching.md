@@ -14,6 +14,8 @@ The public implementation uses the same job contract for Redis and memory stores
 
 Redis-backed jobs survive API restarts. Unfinished non-terminal jobs are requeued on startup. Completed and failed jobs remain readable until Redis state is intentionally cleared.
 
+Terminal jobs are cleaned up by TTL. Redis terminal records are saved with expiry and are also scanned by the cleanup service. Memory fallback jobs are removed from process memory after the same TTL, but memory jobs still do not survive process restart.
+
 ## Related files
 
 - `app/api/routes/jobs.py` owns public job lookup.
@@ -21,6 +23,7 @@ Redis-backed jobs survive API restarts. Unfinished non-terminal jobs are requeue
 - `app/platform/jobs/store.py` owns the job-store interface, in-process fallback queue, worker loop, progress updates, and safe error shaping.
 - `app/platform/jobs/redis_store.py` owns Redis job records, Redis queue claiming, restart recovery, and Redis-backed worker execution.
 - `app/platform/jobs/factory.py` owns memory/Redis backend selection.
+- `app/platform/cleanup.py` owns the background cleanup loop that invokes job and media cleanup.
 - `app/services/runtime/executor.py` owns dispatch from job kind to embedding or reranking execution.
 - `app/workers/scheduler.py` owns the reusable scheduler shape for the later Redis-backed batching worker.
 - `app/platform/gpu/policy.py` owns queue starvation, residency epoch, and switch decision policy.

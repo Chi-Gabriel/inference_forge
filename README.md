@@ -85,6 +85,16 @@ sudo apt update
 sudo apt install -y redis-server
 ```
 
+Cleanup defaults:
+
+- uploads/downloads: `168` hours
+- temp files: `6` hours
+- decoded video clips: `24` hours
+- cache artifacts: `168` hours
+- terminal jobs: `24` hours
+
+Tune these in `.env` with `MEDIA_*_TTL_HOURS`, `JOB_TTL_HOURS`, and `CLEANUP_INTERVAL_SECONDS`.
+
 ## Docker runtime
 
 Copy the example environment and start the stack:

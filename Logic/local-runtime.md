@@ -10,6 +10,8 @@ Host requirements are Python, the `.venv` dependencies, FFmpeg, and NVIDIA/CUDA 
 
 `setup.sh` is the root bootstrap command for non-Docker hosts. It avoids `sudo`, installs host packages only when the current user can run `apt-get`, creates or reuses `.venv`, installs `.[dev,gpu]`, writes local runtime defaults to `.env`, verifies CUDA through PyTorch, and starts the stack unless `--no-start` is passed.
 
+Cleanup runs inside the API process when `CLEANUP_ENABLED=true`. The local defaults keep uploads/downloads for seven days, temp files for six hours, decoded clips for one day, media cache artifacts for seven days, and terminal jobs for one day.
+
 ## Related files
 
 - `setup.sh` bootstraps and optionally starts the full non-Docker runtime.
@@ -17,6 +19,7 @@ Host requirements are Python, the `.venv` dependencies, FFmpeg, and NVIDIA/CUDA 
 - `scripts/start-redis.sh` starts a local Redis process with append-only persistence under `var/redis`.
 - `scripts/start-web.sh` starts the static web console.
 - `scripts/start.sh` starts Redis when available, then starts the API and web console.
+- `app/platform/cleanup.py` owns automatic local cleanup behavior.
 - `.env.example` owns local runtime defaults.
 - `README.md` owns short local run instructions.
 - `deployment.md` owns host setup and operational notes.
