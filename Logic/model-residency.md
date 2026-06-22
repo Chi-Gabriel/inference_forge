@@ -14,3 +14,12 @@ Queue policy cannot switch a model during inference. A failed load leaves the ta
 The initial RTX 3090 profile uses an 8B embedder and 2B reranker as co-resident models. They consume approximately 19.2 GiB before workload activations. GPU execution remains serialized even when weights co-reside.
 
 Swapping remains available for oversized workloads. The measured embedding-to-reranking transition takes 13.48 seconds and the reverse transition takes 5.93 seconds when inactive weights are retained in CPU memory. Swapping therefore favors exceptional capacity over latency.
+
+## Related files
+
+- `app/platform/gpu/types.py` owns residency modes, model states, scheduler state, and scheduler decisions.
+- `app/platform/gpu/residency.py` owns model prepare/load/warm/offload coordination.
+- `app/platform/gpu/policy.py` owns when to stay, load, switch, or idle.
+- `app/services/runtime/executor.py` owns the runtime GPU execution lock and calls into residency before model work.
+- `app/services/embeddings/qwen.py` and `app/services/reranking/qwen.py` own model-specific lifecycle methods used by residency.
+- `app/platform/config.py` owns VRAM cap, reserve, margin, and model residency mode settings.

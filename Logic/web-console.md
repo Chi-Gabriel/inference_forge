@@ -54,3 +54,12 @@ Each status update should include an integer progress percentage when known, a h
 ## UX standard
 
 The console should prioritize one-screen interpretation over raw logs. Video results should use a compact timeline, not a tall vertical list. Configuration, progress, query, and results should remain visible together on desktop layouts. Advanced raw payloads may be collapsible, but the primary view must answer: what was processed, with which parameters, how long it took, and where the query matched.
+
+## Related files
+
+- `web/index.html` owns the console layout and user-facing controls.
+- `web/app/main.js` owns the embedding-lab workflow and public API calls.
+- `web/app/api.js` owns browser-side HTTP behavior and job polling.
+- `web/app/timeline.js` owns the video score timeline and playhead mapping.
+- `web/app/state.js` owns browser-persisted API settings and memory-only run history.
+- `app/api/routes/embeddings.py`, `app/api/routes/rerank.py`, `app/api/routes/media.py`, and `app/api/routes/jobs.py` are the public API surface the console is allowed to call.
