@@ -32,11 +32,13 @@ class RedisJobStore:
         self._job_ttl_seconds = int(job_ttl_hours * 3600)
         self._handler: JobHandler | None = None
         self._worker: asyncio.Task | None = None
+        self._stopping = False
 
     def configure(self, handler: JobHandler) -> None:
         self._handler = handler
 
     def start(self) -> None:
+        self._stopping = False
         self._recover_unfinished_jobs()
         if self._worker is None or self._worker.done():
             self._worker = asyncio.create_task(self._run())
@@ -44,6 +46,7 @@ class RedisJobStore:
     async def stop(self) -> None:
         if self._worker is None:
             return
+        self._stopping = True
         self._worker.cancel()
         try:
             await self._worker
@@ -86,11 +89,16 @@ class RedisJobStore:
 
     async def _run(self) -> None:
         while True:
-            item = await asyncio.to_thread(
-                self._redis.blpop,
-                self._queue_key,
-                self._block_seconds,
-            )
+            try:
+                item = await asyncio.to_thread(
+                    self._redis.blpop,
+                    self._queue_key,
+                    self._block_seconds,
+                )
+            except redis.exceptions.TimeoutError:
+                if self._stopping:
+                    return
+                continue
             if item is None:
                 continue
             job_id = item[1]

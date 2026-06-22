@@ -1,6 +1,7 @@
 import hashlib
 import mimetypes
 import shutil
+import uuid
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -23,9 +24,8 @@ def download_with_ytdlp(
     from yt_dlp import YoutubeDL
     from yt_dlp.utils import DownloadError
 
-    work_dir = temp_root / f"extractor-{hashlib.sha256(url.encode()).hexdigest()[:24]}"
-    if work_dir.exists():
-        shutil.rmtree(work_dir)
+    source_key = hashlib.sha256(url.encode()).hexdigest()[:24]
+    work_dir = temp_root / f"extractor-{source_key}-{uuid.uuid4().hex[:12]}"
     work_dir.mkdir(parents=True, exist_ok=True)
     before = {path for path in work_dir.rglob("*") if path.is_file()}
     options = {
@@ -35,6 +35,7 @@ def download_with_ytdlp(
         "noplaylist": True,
         "socket_timeout": settings.media_extractor_timeout_seconds,
         "max_filesize": settings.media_download_max_bytes,
+        "noprogress": not settings.app_debug,
         "quiet": not settings.app_debug,
         "no_warnings": not settings.app_debug,
         "match_filter": _duration_filter(settings.media_extractor_max_duration_seconds),

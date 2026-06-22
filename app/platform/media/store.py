@@ -11,6 +11,7 @@ from app.platform.config import Settings
 from app.platform.media.direct import download_direct_url
 from app.platform.media.extractor import download_with_ytdlp, is_extractor_url
 from app.platform.media.probe import probe_media
+from app.platform.media.source_index import SourceUrlIndex
 from app.platform.media.types import MediaKind, MediaRecord
 from app.platform.storage.paths import StoragePaths
 
@@ -32,7 +33,7 @@ class MediaStore:
         self.debug = debug
         self._records: dict[str, MediaRecord] = {}
         self._by_hash: dict[str, str] = {}
-        self._by_source_url: dict[str, str] = {}
+        self._sources = SourceUrlIndex()
         self.paths.ensure()
         self._load_existing()
 
@@ -54,10 +55,18 @@ class MediaStore:
         return self._commit(temp, content_type, digest, size, self.paths.uploads)
 
     def download_url(self, url: str) -> MediaRecord:
-        cached = self._by_source_url.get(url)
+        cached = self._sources.get(url)
         if cached is not None:
             return self.get(cached)
-        if self._is_extractor_url(url):
+        with self._sources.lock(url):
+            cached = self._sources.get(url)
+            if cached is not None:
+                return self.get(cached)
+            return self._download_uncached_url(url)
+
+    def _download_uncached_url(self, url: str) -> MediaRecord:
+        allowed = self.settings.media_extractor_allowed_hosts
+        if is_extractor_url(url, allowed):
             return self._download_extractor_url(url)
         self._validate_direct_url(url)
         temp, content_type, digest, size = download_direct_url(
@@ -65,12 +74,7 @@ class MediaStore:
         )
         self._validate_content_type(content_type)
         return self._commit(
-            temp,
-            content_type,
-            digest,
-            size,
-            self.paths.downloads,
-            source_url=url,
+            temp, content_type, digest, size, self.paths.downloads, source_url=url
         )
 
     def _download_extractor_url(self, url: str) -> MediaRecord:
@@ -136,7 +140,7 @@ class MediaStore:
             temp.unlink(missing_ok=True)
             record = self._records[self._by_hash[sha256]]
             if source_url:
-                self._by_source_url[source_url] = record.id
+                self._sources.set(source_url, record.id)
             return record
         extension = EXTENSIONS_BY_TYPE.get(content_type, "")
         media_id = f"media_{sha256[:24]}"
@@ -157,7 +161,7 @@ class MediaStore:
         self._records[media_id] = record
         self._by_hash[sha256] = media_id
         if source_url:
-            self._by_source_url[source_url] = media_id
+            self._sources.set(source_url, media_id)
         return record
 
     def _validate_content_type(self, content_type: str) -> None:
@@ -168,11 +172,6 @@ class MediaStore:
         parsed = urlparse(url)
         if parsed.scheme not in {"http", "https"} or not parsed.netloc:
             raise ValueError("Only http and https media URLs are supported")
-        if self._is_extractor_url(url):
-            raise ValueError("Extractor-backed media URL was routed incorrectly")
-
-    def _is_extractor_url(self, url: str) -> bool:
-        return is_extractor_url(url, self.settings.media_extractor_allowed_hosts)
 
     def _load_existing(self) -> None:
         for directory in [self.paths.uploads, self.paths.downloads]:
@@ -194,7 +193,7 @@ class MediaStore:
                 self._records.pop(record.id, None)
                 self._by_hash.pop(record.sha256, None)
                 if record.source_url:
-                    self._by_source_url.pop(record.source_url, None)
+                    self._sources.pop(record.source_url)
         return removed
 
     def _cleanup_dir(self, directory: Path, ttl_hours: float, now: float) -> int:

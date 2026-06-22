@@ -1,4 +1,6 @@
 import base64
+import concurrent.futures
+import hashlib
 import os
 import time
 
@@ -87,3 +89,31 @@ def test_extractor_url_can_be_disabled(tmp_path) -> None:
         assert "disabled" in str(exc)
     else:
         raise AssertionError("extractor URL should be rejected when disabled")
+
+
+def test_same_source_url_downloads_are_locked(tmp_path, monkeypatch) -> None:
+    settings = Settings(media_root=tmp_path)
+    store = MediaStore(settings)
+    payload = base64.b64decode(PIXEL)
+    digest = hashlib.sha256(payload).hexdigest()
+    calls = 0
+
+    def fake_download(url, temp_root, settings):
+        nonlocal calls
+        calls += 1
+        time.sleep(0.05)
+        temp = temp_root / f"direct-{calls}.png"
+        temp.write_bytes(payload)
+        return temp, "image/png", digest, len(payload)
+
+    monkeypatch.setattr("app.platform.media.store.download_direct_url", fake_download)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+        futures = [
+            executor.submit(store.download_url, "https://example.com/test.png")
+            for _ in range(2)
+        ]
+        records = [future.result() for future in futures]
+
+    assert calls == 1
+    assert records[0].id == records[1].id
