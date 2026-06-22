@@ -116,7 +116,9 @@ async function resolveVideoMedia() {
     return client.uploadMedia(file);
   }
   if (url) {
-    return client.downloadMedia(url);
+    const media = await client.downloadMedia(url);
+    await previewRemoteVideo(media);
+    return media;
   }
   throw new Error("Select a video file or provide a video URL.");
 }
@@ -171,9 +173,13 @@ async function waitForCreatedJob(createdJob) {
   if (!jobId) {
     return createdJob;
   }
-  return client.waitForJob(jobId, (job) => {
+  const job = await client.waitForJob(jobId, (job) => {
     setProgress(job.progress ?? 30, job.stage_label || job.status || "Processing.");
   });
+  if (job.status === "failed") {
+    throw new Error(job.error || "Job failed.");
+  }
+  return job;
 }
 
 function mergeRerankScores(segments, rerankedItems) {
@@ -211,6 +217,16 @@ function previewSelectedVideo() {
     return;
   }
   elements.videoPreview.src = URL.createObjectURL(file);
+}
+
+async function previewRemoteVideo(media) {
+  const mediaId = media.media_id ?? media.id;
+  if (!mediaId) {
+    return;
+  }
+  setProgress(10, "Preparing browser video preview.");
+  const blob = await client.mediaPreviewBlob(mediaId);
+  elements.videoPreview.src = URL.createObjectURL(blob);
 }
 
 function setProgress(percent, label) {

@@ -44,6 +44,10 @@ export class ApiClient {
     return this.request(`/v1/jobs/${encodeURIComponent(jobId)}`);
   }
 
+  async mediaPreviewBlob(mediaId) {
+    return this.requestBlob(`/v1/media/${encodeURIComponent(mediaId)}/preview`);
+  }
+
   async waitForJob(jobId, onUpdate) {
     const started = performance.now();
     while (performance.now() - started < JOB_TIMEOUT_MS) {
@@ -75,6 +79,23 @@ export class ApiClient {
       throw new ApiError(response.status, payload);
     }
     return payload;
+  }
+
+  async requestBlob(path, options = {}) {
+    const { apiBaseUrl, apiKey } = this.getSettings();
+    const headers = new Headers(options.headers || {});
+    if (apiKey) {
+      headers.set("Authorization", `Bearer ${apiKey}`);
+    }
+    const response = await fetch(`${apiBaseUrl.replace(/\/$/, "")}${path}`, {
+      ...options,
+      headers,
+    });
+    if (!response.ok) {
+      const payload = await readPayload(response);
+      throw new ApiError(response.status, payload);
+    }
+    return response.blob();
   }
 }
 

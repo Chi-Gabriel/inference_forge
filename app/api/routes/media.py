@@ -1,6 +1,7 @@
 import asyncio
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from app.api.dependencies import require_api_key
@@ -60,6 +61,19 @@ async def get_media(media_id: str, request: Request) -> MediaPublic:
         return media_public(media_store(request).get(media_id))
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="Media id was not found") from exc
+
+
+@router.get("/{media_id}/preview")
+async def preview_media(media_id: str, request: Request) -> FileResponse:
+    try:
+        path, content_type = await asyncio.to_thread(
+            media_store(request).preview, media_id
+        )
+        return FileResponse(path, media_type=content_type)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Media id was not found") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 def media_store(request: Request) -> MediaStore:

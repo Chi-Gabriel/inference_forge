@@ -27,6 +27,8 @@ The video lab accepts either a local upload or a URL. URL support is split into 
 
 The UI exposes chunk seconds, overlap seconds, FPS, max frames per chunk, embedding dimensions, top-k, and reranking enablement. These values are part of cache identity because they change the sampled content and resulting vectors.
 
+For URL media, the console must request media preview bytes from the public API and load them as a Blob URL. It must not construct internal media paths. Preview requests may return a browser-stabilized derivative when the source codec cannot reliably play in browsers.
+
 The expected embedding result for segmented video is a list of items with media metadata, segment start/end seconds, embedding latency, and either vectors or a server-side vector reference. The console can visualize scores on a horizontal timeline. Each segment occupies width proportional to its duration. Color intensity represents similarity score. A vertical playhead follows the browser video position, and clicking a segment seeks the video.
 
 Reranking is an optional second pass. The console first displays vector-search scores, then overlays reranker scores when available so model behavior can be compared without losing the baseline.

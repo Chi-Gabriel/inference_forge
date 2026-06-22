@@ -117,3 +117,28 @@ def test_same_source_url_downloads_are_locked(tmp_path, monkeypatch) -> None:
 
     assert calls == 1
     assert records[0].id == records[1].id
+
+
+def test_preview_does_not_touch_original_file(tmp_path, monkeypatch) -> None:
+    settings = Settings(media_root=tmp_path)
+    store = MediaStore(settings)
+    video = store.paths.downloads / "media_test.mp4"
+    video.write_bytes(b"fake")
+    record = MediaRecord(
+        id="media_test",
+        kind=MediaKind.VIDEO,
+        content_type="video/mp4",
+        sha256="abc",
+        size_bytes=4,
+        path=video,
+    )
+    store._records[record.id] = record
+    old_time = time.time() - 7200
+    os.utime(video, (old_time, old_time))
+    monkeypatch.setattr(
+        "app.platform.media.browser_preview._video_codec", lambda path: "h264"
+    )
+
+    store.preview(record.id)
+
+    assert video.stat().st_mtime == old_time

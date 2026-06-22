@@ -8,8 +8,10 @@ from urllib.parse import urlparse
 from fastapi import UploadFile
 
 from app.platform.config import Settings
+from app.platform.media.browser_preview import browser_preview
 from app.platform.media.direct import download_direct_url
 from app.platform.media.extractor import download_with_ytdlp, is_extractor_url
+from app.platform.media.hash_file import hash_file
 from app.platform.media.probe import probe_media
 from app.platform.media.source_index import SourceUrlIndex
 from app.platform.media.types import MediaKind, MediaRecord
@@ -82,27 +84,30 @@ class MediaStore:
             raise ValueError("Extractor-backed media URLs are disabled")
         temp, content_type = download_with_ytdlp(url, self.paths.temp, self.settings)
         self._validate_content_type(content_type)
-        sha256 = hashlib.sha256()
-        size = 0
-        with temp.open("rb") as source:
-            while chunk := source.read(CHUNK_SIZE):
-                size += len(chunk)
-                sha256.update(chunk)
+        digest, size = hash_file(temp)
         return self._commit(
             temp,
             content_type,
-            sha256.hexdigest(),
+            digest,
             size,
             self.paths.downloads,
             source_url=url,
         )
 
     def get(self, media_id: str) -> MediaRecord:
+        record = self._record(media_id)
+        record.path.touch(exist_ok=True)
+        return record
+
+    def _record(self, media_id: str) -> MediaRecord:
         record = self._records.get(media_id)
         if record is None:
             raise KeyError(media_id)
-        record.path.touch(exist_ok=True)
         return record
+
+    def preview(self, media_id: str) -> tuple[Path, str]:
+        record = self._record(media_id)
+        return browser_preview(record, self.paths, self.debug)
 
     def cleanup(self, now: float | None = None) -> dict[str, int]:
         current = now or time.time()
@@ -226,13 +231,7 @@ class MediaStore:
         content_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
         if content_type not in self.settings.media_allowed_content_types:
             return
-        sha256 = hashlib.sha256()
-        size = 0
-        with path.open("rb") as source:
-            while chunk := source.read(CHUNK_SIZE):
-                size += len(chunk)
-                sha256.update(chunk)
-        digest = sha256.hexdigest()
+        digest, size = hash_file(path)
         media_id = f"media_{digest[:24]}"
         kind = MediaKind.VIDEO if content_type.startswith("video/") else MediaKind.IMAGE
         metadata = probe_media(path, self.debug) if kind is MediaKind.VIDEO else {}
