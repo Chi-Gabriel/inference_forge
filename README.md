@@ -95,6 +95,8 @@ Cleanup defaults:
 
 Tune these in `.env` with `MEDIA_*_TTL_HOURS`, `JOB_TTL_HOURS`, and `CLEANUP_INTERVAL_SECONDS`.
 
+Provider URLs such as YouTube, TikTok, and Facebook are handled by `yt-dlp` when `MEDIA_EXTRACTOR_ENABLED=true`. Keep the extractor allowlist and duration/size limits tight when running on public machines.
+
 ## Docker runtime
 
 Copy the example environment and start the stack:

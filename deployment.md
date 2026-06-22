@@ -17,7 +17,7 @@
 
 - The development web console can be served with `python -m http.server 8080 -d web`.
 - Browser access requires the API host to allow the console origin through `CORS_ALLOWED_ORIGINS`. The default development origins are localhost and 127.0.0.1 on ports 5173 and 8080.
-- TikTok, Facebook, YouTube, or other extractor-backed URL ingestion still needs a dedicated media-download feature document and server-side `yt-dlp` provisioning before it is enabled.
+- TikTok, Facebook, YouTube, or other extractor-backed URL ingestion is enabled through the bounded `yt-dlp` path documented in `Logic/extractor-ingestion.md`.
 - Install the updated runtime dependencies after pulling this change: `pip install -e '.[dev]'` for API development or the equivalent image rebuild. `python-multipart` is required for media uploads.
 - Configure `MEDIA_ROOT`, media byte limits, direct-download timeout/redirect limits, and `MEDIA_ALLOWED_CONTENT_TYPES` for the deployment host.
 - `API_KEY` is optional. If set, public `/v1` work routes require `Authorization: Bearer <API_KEY>`.
@@ -32,5 +32,6 @@
 - If port `3000` is occupied on a rented host, start the web console with `WEB_PORT=<port> ./scripts/start-web.sh`.
 - Non-Docker Redis can be started with `./scripts/start-redis.sh` when `redis-server` is installed. It stores append-only Redis data under `var/redis` by default.
 - `JOB_STORE_BACKEND=auto` uses Redis when reachable and falls back to memory. Use `JOB_STORE_BACKEND=redis` for production-like runs where job durability must not silently downgrade.
-- If Redis is missing on a non-Docker host, install it with the host package manager when allowed, for example `sudo apt install -y redis-server`.
+- If Redis is missing on a non-Docker host, install it with the host package manager when allowed, for example `apt install -y redis-server` on a root shell.
 - Automatic cleanup is controlled by `CLEANUP_ENABLED`, `CLEANUP_INTERVAL_SECONDS`, `JOB_TTL_HOURS`, and the `MEDIA_*_TTL_HOURS` settings. Model cache cleanup is intentionally manual.
+- Provider/player URL ingestion now uses `yt-dlp`. Install or rebuild dependencies after pulling: `pip install -e '.[dev,gpu]'`. Tune `MEDIA_EXTRACTOR_ENABLED`, `MEDIA_EXTRACTOR_ALLOWED_HOSTS`, `MEDIA_EXTRACTOR_TIMEOUT_SECONDS`, `MEDIA_EXTRACTOR_MAX_DURATION_SECONDS`, `MEDIA_DOWNLOAD_MAX_BYTES`, and `MEDIA_EXTRACTOR_FORMAT`.

@@ -2,20 +2,19 @@ import hashlib
 import mimetypes
 import shutil
 import time
-import urllib.error
-import urllib.request
 from pathlib import Path
 from urllib.parse import urlparse
 
 from fastapi import UploadFile
 
 from app.platform.config import Settings
+from app.platform.media.direct import download_direct_url
+from app.platform.media.extractor import download_with_ytdlp, is_extractor_url
 from app.platform.media.probe import probe_media
 from app.platform.media.types import MediaKind, MediaRecord
 from app.platform.storage.paths import StoragePaths
 
 CHUNK_SIZE = 1024 * 1024
-EXTRACTOR_HOST_HINTS = ("youtube.", "youtu.be", "tiktok.", "facebook.", "fb.watch")
 EXTENSIONS_BY_TYPE = {
     "image/jpeg": ".jpg",
     "image/png": ".png",
@@ -33,6 +32,7 @@ class MediaStore:
         self.debug = debug
         self._records: dict[str, MediaRecord] = {}
         self._by_hash: dict[str, str] = {}
+        self._by_source_url: dict[str, str] = {}
         self.paths.ensure()
         self._load_existing()
 
@@ -50,45 +50,40 @@ class MediaStore:
                     raise ValueError("Uploaded media exceeds the configured size limit")
                 sha256.update(chunk)
                 target.write(chunk)
-        return self._commit(
-            temp, content_type, sha256.hexdigest(), size, self.paths.uploads
-        )
+        digest = sha256.hexdigest()
+        return self._commit(temp, content_type, digest, size, self.paths.uploads)
 
     def download_url(self, url: str) -> MediaRecord:
+        cached = self._by_source_url.get(url)
+        if cached is not None:
+            return self.get(cached)
+        if self._is_extractor_url(url):
+            return self._download_extractor_url(url)
         self._validate_direct_url(url)
-        request = urllib.request.Request(
-            url, headers={"User-Agent": "InferenceForge/0.1"}
+        temp, content_type, digest, size = download_direct_url(
+            url, self.paths.temp, self.settings
         )
-        opener = urllib.request.build_opener(
-            LimitedRedirectHandler(self.settings.media_download_redirect_limit)
+        self._validate_content_type(content_type)
+        return self._commit(
+            temp,
+            content_type,
+            digest,
+            size,
+            self.paths.downloads,
+            source_url=url,
         )
-        try:
-            with opener.open(
-                request, timeout=self.settings.media_download_timeout_seconds
-            ) as response:
-                content_type = response.headers.get_content_type()
-                self._validate_content_type(content_type)
-                temp = (
-                    self.paths.temp
-                    / f"download-{hashlib.sha256(url.encode()).hexdigest()}"
-                )
-                sha256 = hashlib.sha256()
-                size = 0
-                with temp.open("wb") as target:
-                    while True:
-                        chunk = response.read(CHUNK_SIZE)
-                        if not chunk:
-                            break
-                        size += len(chunk)
-                        if size > self.settings.media_download_max_bytes:
-                            temp.unlink(missing_ok=True)
-                            raise ValueError(
-                                "Downloaded media exceeds the configured size limit"
-                            )
-                        sha256.update(chunk)
-                        target.write(chunk)
-        except urllib.error.URLError as exc:
-            raise ValueError("Media download failed") from exc
+
+    def _download_extractor_url(self, url: str) -> MediaRecord:
+        if not self.settings.media_extractor_enabled:
+            raise ValueError("Extractor-backed media URLs are disabled")
+        temp, content_type = download_with_ytdlp(url, self.paths.temp, self.settings)
+        self._validate_content_type(content_type)
+        sha256 = hashlib.sha256()
+        size = 0
+        with temp.open("rb") as source:
+            while chunk := source.read(CHUNK_SIZE):
+                size += len(chunk)
+                sha256.update(chunk)
         return self._commit(
             temp,
             content_type,
@@ -139,7 +134,10 @@ class MediaStore:
     ) -> MediaRecord:
         if sha256 in self._by_hash:
             temp.unlink(missing_ok=True)
-            return self._records[self._by_hash[sha256]]
+            record = self._records[self._by_hash[sha256]]
+            if source_url:
+                self._by_source_url[source_url] = record.id
+            return record
         extension = EXTENSIONS_BY_TYPE.get(content_type, "")
         media_id = f"media_{sha256[:24]}"
         target = directory / f"{media_id}{extension}"
@@ -158,6 +156,8 @@ class MediaStore:
         )
         self._records[media_id] = record
         self._by_hash[sha256] = media_id
+        if source_url:
+            self._by_source_url[source_url] = media_id
         return record
 
     def _validate_content_type(self, content_type: str) -> None:
@@ -168,9 +168,11 @@ class MediaStore:
         parsed = urlparse(url)
         if parsed.scheme not in {"http", "https"} or not parsed.netloc:
             raise ValueError("Only http and https media URLs are supported")
-        host = parsed.netloc.lower()
-        if any(hint in host for hint in EXTRACTOR_HOST_HINTS):
-            raise ValueError("Extractor-backed media URLs are not enabled yet")
+        if self._is_extractor_url(url):
+            raise ValueError("Extractor-backed media URL was routed incorrectly")
+
+    def _is_extractor_url(self, url: str) -> bool:
+        return is_extractor_url(url, self.settings.media_extractor_allowed_hosts)
 
     def _load_existing(self) -> None:
         for directory in [self.paths.uploads, self.paths.downloads]:
@@ -191,6 +193,8 @@ class MediaStore:
             if record is not None:
                 self._records.pop(record.id, None)
                 self._by_hash.pop(record.sha256, None)
+                if record.source_url:
+                    self._by_source_url.pop(record.source_url, None)
         return removed
 
     def _cleanup_dir(self, directory: Path, ttl_hours: float, now: float) -> int:
@@ -244,21 +248,3 @@ class MediaStore:
         )
         self._records[media_id] = record
         self._by_hash[digest] = media_id
-
-
-class LimitedRedirectHandler(urllib.request.HTTPRedirectHandler):
-    def __init__(self, limit: int) -> None:
-        self.limit = limit
-        self.redirects = 0
-
-    def redirect_request(self, req, fp, code, msg, headers, newurl):
-        self.redirects += 1
-        if self.redirects > self.limit:
-            raise urllib.error.HTTPError(
-                req.full_url,
-                code,
-                "Too many redirects",
-                headers,
-                fp,
-            )
-        return super().redirect_request(req, fp, code, msg, headers, newurl)

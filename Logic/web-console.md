@@ -23,7 +23,7 @@ All requests may include `Authorization: Bearer <api key>` when the user provide
 The video lab accepts either a local upload or a URL. URL support is split into two backend capabilities:
 
 - Direct media URL download for simple files with bounded size, timeout, redirect, and content-type checks.
-- Extractor-backed download for providers such as TikTok, Facebook, or YouTube only after a dedicated feature document defines `yt-dlp` installation, provider allowlists, max duration, max size, rate limits, cache identity, failure handling, and legal/operator controls.
+- Extractor-backed download for providers such as TikTok, Facebook, or YouTube through the bounded `yt-dlp` path documented in `Logic/extractor-ingestion.md`.
 
 The UI exposes chunk seconds, overlap seconds, FPS, max frames per chunk, embedding dimensions, top-k, and reranking enablement. These values are part of cache identity because they change the sampled content and resulting vectors.
 

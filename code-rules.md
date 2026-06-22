@@ -82,10 +82,9 @@ before implementing.
 * Do not make the server download the same video repeatedly if it is already cached.
 * Hash media bytes for deduplication.
 * URL downloads must have size limits, timeout limits, content-type checks, and redirect limits.
-* Do not support YouTube or complex third-party extractors unless a feature document is added for it.
+* YouTube, TikTok, Facebook, or other complex third-party extractors may be supported only through a documented extractor-ingestion feature using bounded `yt-dlp` settings: provider allowlist, size limit, duration limit, timeout, cache/dedupe identity, safe errors, cleanup, and no internal path exposure.
 * Keep uploaded media, downloaded media, temp files, decoded frames, and embedding cache separate.
 * Cleanup must handle expired media, failed jobs, temp files, old decoded frames, and orphaned files.
 * Do not expose internal paths, stack traces, signed urls, gpu details, or secrets.
-
 
 

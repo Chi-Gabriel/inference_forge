@@ -42,6 +42,19 @@ class Settings(BaseSettings):
     media_download_max_bytes: int = Field(default=1_073_741_824, gt=0)
     media_download_timeout_seconds: float = Field(default=30, gt=0)
     media_download_redirect_limit: int = Field(default=3, ge=0, le=10)
+    media_extractor_enabled: bool = True
+    media_extractor_timeout_seconds: int = Field(default=180, gt=0)
+    media_extractor_max_duration_seconds: int = Field(default=600, gt=0)
+    media_extractor_allowed_hosts: list[str] = Field(
+        default=[
+            "youtube.com",
+            "youtu.be",
+            "tiktok.com",
+            "facebook.com",
+            "fb.watch",
+        ]
+    )
+    media_extractor_format: str = "bv*+ba/b"
     media_allowed_content_types: list[str] = Field(
         default=[
             "video/mp4",

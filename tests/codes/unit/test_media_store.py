@@ -75,3 +75,15 @@ def test_media_cleanup_removes_expired_indexed_upload(tmp_path) -> None:
     assert removed["uploads"] == 1
     assert record.id not in store._records
     assert record.sha256 not in store._by_hash
+
+
+def test_extractor_url_can_be_disabled(tmp_path) -> None:
+    settings = Settings(media_root=tmp_path, media_extractor_enabled=False)
+    store = MediaStore(settings)
+
+    try:
+        store.download_url("https://www.youtube.com/watch?v=abc")
+    except ValueError as exc:
+        assert "disabled" in str(exc)
+    else:
+        raise AssertionError("extractor URL should be rejected when disabled")
