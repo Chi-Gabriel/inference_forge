@@ -55,4 +55,9 @@ def cut_video_segment(
         "copy",
         str(target),
     ]
-    subprocess.run(command, capture_output=not debug, text=True, check=True)
+    try:
+        subprocess.run(command, capture_output=not debug, text=True, check=True)
+    except subprocess.CalledProcessError as exc:
+        detail = (exc.stderr or "").strip().splitlines()
+        message = detail[-1] if detail else "FFmpeg failed to cut video segment"
+        raise ValueError(message) from exc

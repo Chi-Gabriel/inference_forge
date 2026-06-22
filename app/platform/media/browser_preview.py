@@ -17,7 +17,7 @@ def browser_preview(
     if codec in VIDEO_CODEC_BROWSER_SAFE:
         return record.path, record.content_type
     target = paths.cache / "browser-preview" / f"{record.id}.mp4"
-    if not target.exists() or target.stat().st_mtime < record.path.stat().st_mtime:
+    if not target.exists():
         _transcode_video(record.path, target, debug)
     return target, "video/mp4"
 

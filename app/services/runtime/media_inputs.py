@@ -9,6 +9,8 @@ from app.services.runtime.types import (
     SegmentationOptions,
 )
 
+MIN_TAIL_SEGMENT_SECONDS = 2.0
+
 
 class MediaInputResolver:
     def __init__(self, media_store: MediaStore, debug: bool = False) -> None:
@@ -24,14 +26,14 @@ class MediaInputResolver:
         if item.type == "image":
             if record.kind is not MediaKind.IMAGE:
                 raise ValueError("Image input requires an image media id")
-            return {"image": str(record.path)}
+            return {"image": str(record.path.resolve())}
         if item.type == "video":
             if record.kind is not MediaKind.VIDEO:
                 raise ValueError("Video input requires a video media id")
-            return {"video": str(record.path)}
+            return {"video": str(record.path.resolve())}
         if item.type == "video_segment":
             segment = self.resolve_segment(record, item)
-            return {"video": str(segment.path)}
+            return {"video": str(segment.path.resolve())}
         raise ValueError("Unsupported input type")
 
     def expand_embedding_inputs(
@@ -48,7 +50,7 @@ class MediaInputResolver:
                     item.segmentation,
                     item.sampling or SamplingOptions(),
                 ):
-                    qwen_inputs.append({"video": str(segment.path)})
+                    qwen_inputs.append({"video": str(segment.path.resolve())})
                     metadata.append(
                         {
                             "id": f"{record.id}:{segment.start_seconds:.3f}",
@@ -80,6 +82,8 @@ class MediaInputResolver:
         start = 0.0
         while start < record.duration_seconds:
             end = min(start + segmentation.chunk_seconds, record.duration_seconds)
+            if end - start < MIN_TAIL_SEGMENT_SECONDS and segments:
+                break
             path = self._segment_path(record, start, end, sampling)
             if not path.exists():
                 cut_video_segment(record.path, path, start, end - start, self.debug)
@@ -132,8 +136,16 @@ class MediaInputResolver:
         end: float,
         sampling: SamplingOptions,
     ) -> Path:
-        name = (
-            f"{record.id}_{start:.3f}_{end:.3f}_"
-            f"{sampling.fps:.2f}_{sampling.max_frames}.mp4"
-        ).replace(".", "p")
+        values = [
+            record.id,
+            _path_number(start, 3),
+            _path_number(end, 3),
+            _path_number(sampling.fps, 2),
+            str(sampling.max_frames),
+        ]
+        name = "_".join(values) + ".mp4"
         return self.media_store.paths.decoded / record.id / name
+
+
+def _path_number(value: float, precision: int) -> str:
+    return f"{value:.{precision}f}".replace(".", "p")

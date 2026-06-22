@@ -10,6 +10,8 @@ Stored media is split by origin and purpose: uploads, downloads, temp files, dec
 
 Browser playback uses a derived preview path, not the original media path. If downloaded video uses a browser-hostile codec such as HEVC/H.265, the API can transcode a cached H.264/yuv420p MP4 preview under media cache. This preview is for UI playback only; embedding and reranking keep using the original stored media unless a feature explicitly opts into normalized media.
 
+Video segmentation should not emit tiny trailing clips after normal segments. Very short tails, for example a one-second final chunk after many ten-second chunks, can be unstable in video decoders and are not useful enough to justify blocking the whole job.
+
 Automatic cleanup is enabled by default. Uploads and downloads expire by file mtime, and media lookup refreshes mtime so recently used media is retained. Temp files, decoded clips, and cache artifacts have separate TTLs. Model checkpoint cache is not part of media cleanup and must not be deleted automatically.
 
 ## Related files

@@ -78,7 +78,9 @@ class JobExecutor:
         await self.job_store.update(record.id, JobStatus.EMBEDDING, 45, "Embedding")
         async with self._gpu_lock:
             await self._residency.ensure_gpu(ModelKind.EMBEDDING)
-            vectors = await self._embedding.embed(qwen_inputs, payload.dimensions)
+            vectors = await self._embed_inputs(
+                record.id, qwen_inputs, payload.dimensions
+            )
             query_vector = (
                 (await self._embedding.embed([query_input], payload.dimensions))[0]
                 if query_input
@@ -95,6 +97,41 @@ class JobExecutor:
             "dimensions": payload.dimensions,
             "latency_ms": latency_ms,
         }
+
+    async def _embed_inputs(
+        self,
+        job_id: str,
+        inputs: list[dict[str, str]],
+        dimensions: int,
+    ) -> list[list[float]]:
+        vectors: list[list[float]] = []
+        total = len(inputs)
+        for start, batch in self._embedding_batches(inputs):
+            vectors.extend(await self._embedding.embed(batch, dimensions))
+            done = min(total, start + len(batch))
+            progress = 45 + int(35 * done / max(total, 1))
+            await self.job_store.update(
+                job_id, JobStatus.EMBEDDING, progress, f"Embedding {done}/{total}"
+            )
+        return vectors
+
+    def _embedding_batches(
+        self, inputs: list[dict[str, str]]
+    ) -> list[tuple[int, list[dict[str, str]]]]:
+        batches: list[tuple[int, list[dict[str, str]]]] = []
+        start = 0
+        while start < len(inputs):
+            limit = self._embedding_batch_limit(inputs[start])
+            batches.append((start, inputs[start : start + limit]))
+            start += limit
+        return batches
+
+    def _embedding_batch_limit(self, item: dict[str, str]) -> int:
+        if item.get("video"):
+            return self.settings.embedding_video_batch_max
+        if item.get("image"):
+            return self.settings.embedding_image_batch_max
+        return self.settings.embedding_text_batch_max
 
     async def _rerank_job(self, record: JobRecord) -> dict:
         payload = RerankJobPayload.model_validate(record.payload)

@@ -10,6 +10,8 @@ On the RTX 3090, the validated BF16 SDPA text run used approximately 15.39 GiB r
 
 Public embedding jobs accept text, image media ids, video media ids, and segmented video requests. Segmented video jobs cut cacheable clips under decoded media storage and embed each clip as a separate item. If a query is provided, the service embeds the query in the same vector space and returns top-k cosine-ranked items.
 
+Embedding jobs apply configured micro-batch limits before calling model backends. Video segment lists are especially sensitive because provider codecs and decoder metadata can make large batches slow or unstable. `EMBEDDING_VIDEO_BATCH_MAX` is the active bound for video embedding batches.
+
 ## Related files
 
 - `app/api/routes/embeddings.py` owns public embedding job creation and the OpenAI-style text embedding entrypoint.
